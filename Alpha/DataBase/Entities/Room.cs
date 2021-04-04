@@ -1,9 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 #nullable disable
 
-namespace Alpha.Entities
+namespace Alpha.DataBase.Entities
 {
     public partial class Room
     {

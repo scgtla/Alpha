@@ -2,16 +2,19 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Alpha.Entities;
+using Alpha.DataBase;
+using Alpha.DataBase.Entities;
 using Alpha.Models.Booking;
 using Alpha.Models.Role;
 using Alpha.Models.Room;
 using Alpha.Models.User;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace Alpha.Controllers
 {
+    [Authorize]
     [ApiController]
     [Route("api/[controller]")]
     public class BookingController : Controller
@@ -24,20 +27,30 @@ namespace Alpha.Controllers
         }
 
         [HttpPost("add-booking")]
-        public async Task<int> AddBooking(BookingShortInfo bookingShortInfo)
+        public async Task<int> AddBooking(BookingCreate bookingCreate)
         {
-            if (bookingShortInfo.DateTo<bookingShortInfo.DateFrom)
+            if (bookingCreate.DateTo < bookingCreate.DateFrom)
             {
                 throw new Exception("Неверыный промежуток времени");
-
             }
+
+            var isValid = _dbContext.Bookings.Any(a =>
+                a.RoomId == bookingCreate.RoomId &&
+                a.DateFrom == bookingCreate.DateFrom &&
+                a.DateTo == bookingCreate.DateTo &&
+                a.Status == true);
+
+            if (isValid)
+            {
+                throw new Exception("Данная комната на данное время уже забронирована");
+            }
+
             var booking = new Booking()
             {
-                Status = bookingShortInfo.Status,
-                DateFrom = bookingShortInfo.DateFrom,
-                DateTo = bookingShortInfo.DateTo,
-                UserId = bookingShortInfo.UserId,
-                RoomId = bookingShortInfo.RoomId
+                DateFrom = bookingCreate.DateFrom,
+                DateTo = bookingCreate.DateTo,
+                UserId = bookingCreate.UserId,
+                RoomId = bookingCreate.RoomId
             };
             await _dbContext.AddAsync(booking);
             await _dbContext.SaveChangesAsync();
@@ -80,13 +93,28 @@ namespace Alpha.Controllers
         }
 
         [HttpPut("update-booking")]
-        public async Task UpdateBooking([FromBody] BookingModel bookingModel)
+        public async Task UpdateBooking([FromBody] BookingCreate bookingCreate)
         {
-            var booking = await _dbContext.Bookings.SingleOrDefaultAsync(a => a.BookingId == bookingModel.BookingId);
-            bookingModel.BookingId = bookingModel.BookingId;
-            bookingModel.Status = bookingModel.Status;
-            bookingModel.DateFrom = bookingModel.DateFrom;
-            bookingModel.DateTo = bookingModel.DateTo;
+            if (bookingCreate.DateTo < bookingCreate.DateFrom)
+            {
+                throw new Exception("Неверыный промежуток времени");
+            }
+
+            var isValid = _dbContext.Bookings.Any(a =>
+                a.RoomId == bookingCreate.RoomId &&
+                a.DateFrom == bookingCreate.DateFrom &&
+                a.DateTo == bookingCreate.DateTo &&
+                a.Status == true);
+
+            if (isValid)
+            {
+                throw new Exception("Данная комната на данное время уже забронирована");
+            }
+
+            var booking = await _dbContext.Bookings.SingleOrDefaultAsync(a => a.BookingId == bookingCreate.BookingId);
+            booking.DateFrom = bookingCreate.DateFrom;
+            booking.DateTo = bookingCreate.DateTo;
+
 
             _dbContext.Bookings.Update(booking);
             await _dbContext.SaveChangesAsync();
@@ -95,8 +123,18 @@ namespace Alpha.Controllers
         [HttpDelete("del-booking/{bookingid}")]
         public async Task DeleteBooking([FromRoute] int bookingid)
         {
-            var booking = await _dbContext.Bookings.SingleOrDefaultAsync(a => a.BookingId == bookingid);
+            Booking booking = await _dbContext.Bookings.SingleOrDefaultAsync(a => a.BookingId == bookingid);
             _dbContext.Bookings.Remove(booking);
+            await _dbContext.SaveChangesAsync();
+        }
+
+        [Authorize(Roles = "OfficeManager")]
+        [HttpPut("update-status")]
+        public async Task UpdateStatus([FromRoute] BookingStatus bookingStatus)
+        {
+            var booking = await _dbContext.Bookings.SingleOrDefaultAsync(a => a.BookingId == bookingStatus.BookingId);
+            booking.Status = bookingStatus.Status;
+            _dbContext.Bookings.Update(booking);
             await _dbContext.SaveChangesAsync();
         }
     }

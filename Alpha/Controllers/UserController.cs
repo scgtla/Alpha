@@ -3,14 +3,17 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Alpha.Entities;
+using Alpha.DataBase;
+using Alpha.DataBase.Entities;
 using Alpha.Models.Role;
 using Alpha.Models.User;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace Alpha.Controllers
 {
+    [Authorize(Roles = "OfficeManager")]
     [ApiController]
     [Route("api/[controller]")]
     public class UserController : Controller
