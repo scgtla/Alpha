@@ -1,4 +1,5 @@
-﻿using Alpha.DataBase.Entities;
+﻿using System.Collections.Generic;
+using Alpha.DataBase.Entities;
 using Microsoft.EntityFrameworkCore;
 
 #nullable disable
@@ -27,6 +28,23 @@ namespace Alpha.DataBase
             {
                 optionsBuilder.UseSqlServer("Server=.\\SQLEXPRESS;Database=AlphaDB;Trusted_Connection=True;");
             }
+        }
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<Role>().HasData(new List<Role>()
+            {
+                new Role()
+                {
+                    RoleId = 1,
+                    Name = "OfficeManager",
+                },
+                new Role()
+                {
+                    RoleId = 2,
+                    Name = "Employee"
+                }
+            });
         }
     }
 }
